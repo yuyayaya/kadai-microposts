@@ -1,4 +1,7 @@
 class User < ApplicationRecord
+    
+    include SessionsHelper
+    
     validates :name, presence:true, length: { maximum: 50}
     validates :email, presence: true, length: { maximum: 255 },
                     format: { with: /\A[\w+\-.]+@[a-z\d\-.]+\.[a-z]+\z/i },
@@ -10,6 +13,13 @@ class User < ApplicationRecord
   has_many :followings, through: :relationships, source: :follow
   has_many :reverses_of_relationship, class_name: 'Relationship', foreign_key: 'follow_id'
   has_many :followers, through: :reverses_of_relationship, source: :user
+  has_many :favorites
+  has_many :favorite_microposts, through: :favorites, source: :micropost
+  
+  # has_many :favorite_micropostsは下記のようなインスタンスメソッドが追加されることと同じ
+  # これをDSL、シンタックスシュガーと言ったりする。
+  # def favorite_microposts
+  # end
   
   def follow(other_user)
     unless self == other_user
@@ -29,4 +39,17 @@ class User < ApplicationRecord
   def feed_microposts
     Micropost.where(user_id: self.following_ids + [self.id])
   end
+  
+  def favorite(micropost)
+      favorites.find_or_create_by(micropost_id: micropost.id, user_id: current_user.id)
+  end
+  
+  def unfavoite(micropost)
+   　  favorite = self.favorites.find_by(micropost_id: micropost.id, user_id: current_user.id)
+  end
+  
+  def favorite?(micropost)
+    Favorite.find_by(user: self, micropost: micropost).blank?
+  end
+  
 end
